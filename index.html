@@ -152,13 +152,34 @@
     function convert() {
       const input = textarea.value.trim();
       const lines = input.split(/\n+/).filter(line => line.trim() !== "");
+      
       const outputLines = lines.map((line, index) => {
-        const parts = line.split(",");
-        const url = parts[0]?.trim() || "";
-        const label = parts[1]?.trim().toUpperCase() || "";
+        let url = "";
+        let label = "";
+        
+        // Tìm kiếm URL trong dòng
+        const urlMatch = line.match(/(https?:\/\/[^\s,]+)/);
+        
+        if (urlMatch) {
+          url = urlMatch[0];
+          const remainingText = line.substring(line.indexOf(url) + url.length).trim();
+          const parts = remainingText.split(",");
+          if (parts.length > 1) {
+            label = parts[1].trim().toUpperCase();
+          } else {
+            label = "";
+          }
+        } else {
+          // Xử lý theo định dạng cũ nếu không tìm thấy URL
+          const parts = line.split(",");
+          url = parts[0]?.trim() || "";
+          label = parts[1]?.trim().toUpperCase() || "";
+        }
+        
         const isLast = index === lines.length - 1;
         return `        {url: "${url}", label: "${label}"}${isLast ? "" : ","}`;
       });
+      
       const resultText = outputLines.join("\n");
       document.getElementById("output").textContent = resultText;
 
