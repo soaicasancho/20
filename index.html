@@ -128,7 +128,7 @@
   <textarea id="inputUrls" placeholder="https://video60min.com,C001"></textarea>
 
   <div class="button-group">
-    <button id="pasteBtn" onclick="pasteFromClipboard()" disabled>Dán từ bộ nhớ đệm</button>
+    <button id="pasteBtn" onclick="pasteFromClipboard()">Dán từ bộ nhớ đệm</button>
     <button id="convertBtn" onclick="convert()" disabled>Chuyển sang code</button>
     <button id="copyBtn" onclick="copyResult()" disabled>Sao chép kết quả</button>
     <button id="clearBtn" onclick="clearInput()" disabled>🗑️ Xoá</button>
@@ -138,37 +138,7 @@
   <pre id="output"></pre>
 
   <script>
-    const pasteBtn = document.getElementById("pasteBtn");
     const textarea = document.getElementById("inputUrls");
-
-    // Hàm cập nhật trạng thái nút "Dán"
-    function updatePasteButtonState() {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIOS) {
-            pasteBtn.disabled = false;
-        } else {
-            if (!navigator.clipboard || !navigator.clipboard.read) {
-                pasteBtn.disabled = true;
-                return;
-            }
-            try {
-                navigator.clipboard.read().then(items => {
-                    let hasText = false;
-                    for (const item of items) {
-                        if (item.types.includes("text/plain")) {
-                            hasText = true;
-                            break;
-                        }
-                    }
-                    pasteBtn.disabled = !hasText;
-                }).catch(() => {
-                    pasteBtn.disabled = false;
-                });
-            } catch (err) {
-                pasteBtn.disabled = false;
-            }
-        }
-    }
 
     // Theo dõi thay đổi trong ô nhập
     textarea.addEventListener("input", function () {
@@ -229,20 +199,28 @@
 
     // Hàm dán nhanh từ clipboard với thông báo trực tiếp trên nút
     async function pasteFromClipboard() {
+      const pasteBtn = document.getElementById("pasteBtn");
       const originalText = pasteBtn.textContent;
+
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        pasteBtn.textContent = "Trình duyệt không hỗ trợ";
+        setTimeout(() => {
+          pasteBtn.textContent = originalText;
+        }, 1000);
+        return;
+      }
+
       try {
-        if (navigator.clipboard && navigator.clipboard.readText) {
-          const text = await navigator.clipboard.readText();
-          if (text) {
-            if (textarea.value.trim() !== "") textarea.value += "\n";
-            textarea.value += text;
-            textarea.dispatchEvent(new Event("input"));
-            pasteBtn.textContent = "✅ Đã dán bộ nhớ đệm";
-          } else {
-            pasteBtn.textContent = "Bộ nhớ đệm trống";
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          if (textarea.value.trim() !== "") {
+            textarea.value += "\n";
           }
+          textarea.value += text;
+          textarea.dispatchEvent(new Event("input"));
+          pasteBtn.textContent = "✅ Đã dán bộ nhớ đệm";
         } else {
-          pasteBtn.textContent = "Trình duyệt không hỗ trợ";
+          pasteBtn.textContent = "❎ Bộ nhớ đệm trống";
         }
       } catch (err) {
         console.error("Lỗi khi dán từ clipboard:", err);
@@ -252,7 +230,7 @@
       pasteBtn.disabled = true;
       setTimeout(() => {
         pasteBtn.textContent = originalText;
-        updatePasteButtonState();
+        pasteBtn.disabled = false;
       }, 1000);
     }
 
@@ -284,9 +262,6 @@
       const clearBtn = document.getElementById("clearBtn");
       clearBtn.disabled = input === "" && output === "";
     }
-
-    // Kiểm tra clipboard khi tải trang
-    document.addEventListener("DOMContentLoaded", updatePasteButtonState);
   </script>
 
 </body>
