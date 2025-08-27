@@ -14,7 +14,6 @@
   <meta name="apple-mobile-web-app-title" content="Code">
 
   <style>
-    /* Reset cơ bản */
     * {
       margin: 0;
       padding: 0;
@@ -28,7 +27,6 @@
       color: #222;
     }
 
-    /* Tiêu đề chính */
     h2 {
       font-size: 18px;
       font-weight: 600;
@@ -39,13 +37,12 @@
       gap: 6px;
     }
 
-    /* Textarea hiện đại */
     textarea {
       width: 100%;
-      height: 150px;
+      height: 250px;
       padding: 12px;
       font-family: monospace;
-      font-size: 15px;
+      font-size: 16px;
       border-radius: 10px;
       border: 1px solid #ccc;
       background-color: #fff;
@@ -59,7 +56,6 @@
       outline: none;
     }
 
-    /* Container nút bấm */
     .button-group {
       display: flex;
       flex-wrap: wrap;
@@ -67,7 +63,6 @@
       margin-bottom: 15px;
     }
 
-    /* Nút hiện đại */
     button {
       padding: 12px 20px;
       font-size: 16px;
@@ -95,7 +90,6 @@
       box-shadow: none;
     }
 
-    /* Kết quả */
     pre {
       background: #fff;
       padding: 12px;
@@ -107,7 +101,6 @@
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    /* Responsive cho điện thoại */
     @media (max-width: 600px) {
       body {
         padding: 15px;
@@ -135,8 +128,9 @@
   <textarea id="inputUrls" placeholder="https://video60min.com,C001"></textarea>
 
   <div class="button-group">
-    <button id="convertBtn" onclick="convert()" disabled>Chuyển đổi sang code</button>
-    <button id="copyBtn" onclick="copyResult()" disabled>📋 Sao chép kết quả</button>
+    <button id="pasteBtn" onclick="pasteFromClipboard()" disabled>Dán từ bộ nhớ đệm</button>
+    <button id="convertBtn" onclick="convert()" disabled>Chuyển sang code</button>
+    <button id="copyBtn" onclick="copyResult()" disabled>Sao chép kết quả</button>
     <button id="clearBtn" onclick="clearInput()" disabled>🗑️ Xoá</button>
   </div>
 
@@ -144,22 +138,41 @@
   <pre id="output"></pre>
 
   <script>
-    function updateClearButtonState() {
-      const input = document.getElementById("inputUrls").value.trim();
-      const output = document.getElementById("output").textContent.trim();
-      const clearBtn = document.getElementById("clearBtn");
-      clearBtn.disabled = input === "" && output === "";
+    const pasteBtn = document.getElementById("pasteBtn");
+    const textarea = document.getElementById("inputUrls");
+
+    // Kiểm tra clipboard có hỗ trợ text hay không
+    async function checkClipboardType() {
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        pasteBtn.disabled = true;
+        return;
+      }
+      try {
+        const items = await navigator.clipboard.read();
+        let hasText = false;
+        for (const item of items) {
+          if (item.types.includes("text/plain")) {
+            hasText = true;
+            break;
+          }
+        }
+        pasteBtn.disabled = !hasText;
+      } catch (err) {
+        pasteBtn.disabled = true;
+      }
     }
 
-    document.getElementById("inputUrls").addEventListener("input", function () {
+    // Theo dõi thay đổi trong ô nhập
+    textarea.addEventListener("input", function () {
       const input = this.value.trim();
       const convertBtn = document.getElementById("convertBtn");
       convertBtn.disabled = input === "";
       updateClearButtonState();
     });
 
+    // Hàm chuyển đổi dữ liệu
     function convert() {
-      const input = document.getElementById("inputUrls").value.trim();
+      const input = textarea.value.trim();
       const lines = input.split(/\n+/).filter(line => line.trim() !== "");
       const outputLines = lines.map((line, index) => {
         const parts = line.split(",");
@@ -168,23 +181,33 @@
         const isLast = index === lines.length - 1;
         return `        {url: "${url}", label: "${label}"}${isLast ? "" : ","}`;
       });
-
       const resultText = outputLines.join("\n");
       document.getElementById("output").textContent = resultText;
 
       const copyBtn = document.getElementById("copyBtn");
       copyBtn.disabled = resultText.trim() === "";
+
+      // Thông báo trực tiếp trên nút convert
+      const convertBtn = document.getElementById("convertBtn");
+      const originalText = convertBtn.textContent;
+      convertBtn.textContent = "✅ Đã chuyển đổi!";
+      convertBtn.disabled = true;
+      setTimeout(() => {
+        convertBtn.textContent = originalText;
+        convertBtn.disabled = false;
+      }, 1000);
+
       updateClearButtonState();
     }
 
+    // Hàm sao chép kết quả
     function copyResult() {
       const text = document.getElementById("output").textContent;
       const copyBtn = document.getElementById("copyBtn");
-
       navigator.clipboard.writeText(text)
         .then(() => {
           const originalText = copyBtn.textContent;
-          copyBtn.textContent = " Đã sao chép!";
+          copyBtn.textContent = "✅ Đã sao chép!";
           copyBtn.disabled = true;
           setTimeout(() => {
             copyBtn.textContent = originalText;
@@ -196,13 +219,68 @@
         });
     }
 
+    // Hàm dán nhanh từ clipboard với thông báo trực tiếp trên nút
+    async function pasteFromClipboard() {
+      const originalText = pasteBtn.textContent;
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            if (textarea.value.trim() !== "") textarea.value += "\n";
+            textarea.value += text;
+            textarea.dispatchEvent(new Event("input"));
+            pasteBtn.textContent = "✅ Đã dán bộ nhớ đệm";
+          } else {
+            pasteBtn.textContent = "Bộ nhớ đệm trống";
+          }
+        } else {
+          pasteBtn.textContent = "Trình duyệt không hỗ trợ";
+        }
+      } catch (err) {
+        console.error("Lỗi khi dán từ clipboard:", err);
+        pasteBtn.textContent = "Không thể truy cập bộ nhớ đệm";
+      }
+
+      pasteBtn.disabled = true;
+      setTimeout(() => {
+        pasteBtn.textContent = originalText;
+        pasteBtn.disabled = false;
+      }, 1000);
+
+      checkClipboardType();
+    }
+
     function clearInput() {
-      document.getElementById("inputUrls").value = "";
+      const clearBtn = document.getElementById("clearBtn");
+      const originalText = clearBtn.textContent;
+
+      // Xoá nội dung
+      textarea.value = "";
       document.getElementById("output").textContent = "";
       document.getElementById("convertBtn").disabled = true;
       document.getElementById("copyBtn").disabled = true;
-      updateClearButtonState();
+
+      // Hiển thị thông báo trực tiếp trên nút
+      clearBtn.textContent = "✅ Đã xóa!";
+      clearBtn.disabled = true;
+
+      setTimeout(() => {
+        clearBtn.textContent = originalText;
+        // Sau khi restore text, cập nhật trạng thái nút
+        updateClearButtonState();
+      }, 1000);
     }
+
+    // Cập nhật trạng thái nút Xoá
+    function updateClearButtonState() {
+      const input = textarea.value.trim();
+      const output = document.getElementById("output").textContent.trim();
+      const clearBtn = document.getElementById("clearBtn");
+      clearBtn.disabled = input === "" && output === "";
+    }
+
+    // Kiểm tra clipboard khi tải trang
+    document.addEventListener("DOMContentLoaded", checkClipboardType);
   </script>
 
 </body>
