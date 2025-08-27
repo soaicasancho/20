@@ -155,7 +155,7 @@
       const outputLines = lines.map((line, index) => {
         const parts = line.split(",");
         const url = parts[0]?.trim() || "";
-        const label = parts[1]?.trim() || "";
+        const label = parts[1]?.trim().toUpperCase() || "";
         const isLast = index === lines.length - 1;
         return `        {url: "${url}", label: "${label}"}${isLast ? "" : ","}`;
       });
