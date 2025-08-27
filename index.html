@@ -141,25 +141,33 @@
     const pasteBtn = document.getElementById("pasteBtn");
     const textarea = document.getElementById("inputUrls");
 
-    // Kiểm tra clipboard có hỗ trợ text hay không
-    async function checkClipboardType() {
-      if (!navigator.clipboard || !navigator.clipboard.read) {
-        pasteBtn.disabled = true;
-        return;
-      }
-      try {
-        const items = await navigator.clipboard.read();
-        let hasText = false;
-        for (const item of items) {
-          if (item.types.includes("text/plain")) {
-            hasText = true;
-            break;
-          }
+    // Hàm cập nhật trạng thái nút "Dán"
+    function updatePasteButtonState() {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+            pasteBtn.disabled = false;
+        } else {
+            if (!navigator.clipboard || !navigator.clipboard.read) {
+                pasteBtn.disabled = true;
+                return;
+            }
+            try {
+                navigator.clipboard.read().then(items => {
+                    let hasText = false;
+                    for (const item of items) {
+                        if (item.types.includes("text/plain")) {
+                            hasText = true;
+                            break;
+                        }
+                    }
+                    pasteBtn.disabled = !hasText;
+                }).catch(() => {
+                    pasteBtn.disabled = false;
+                });
+            } catch (err) {
+                pasteBtn.disabled = false;
+            }
         }
-        pasteBtn.disabled = !hasText;
-      } catch (err) {
-        pasteBtn.disabled = true;
-      }
     }
 
     // Theo dõi thay đổi trong ô nhập
@@ -244,10 +252,8 @@
       pasteBtn.disabled = true;
       setTimeout(() => {
         pasteBtn.textContent = originalText;
-        pasteBtn.disabled = false;
+        updatePasteButtonState();
       }, 1000);
-
-      checkClipboardType();
     }
 
     function clearInput() {
@@ -280,7 +286,7 @@
     }
 
     // Kiểm tra clipboard khi tải trang
-    document.addEventListener("DOMContentLoaded", checkClipboardType);
+    document.addEventListener("DOMContentLoaded", updatePasteButtonState);
   </script>
 
 </body>
